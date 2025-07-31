@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>abel@localmesh:~$</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <span class="close"></span>
+                <span class="minimize"></span>
+                <span class="maximize"></span>
+            </div>
+            <div class="terminal-title">abel@local: ~</div>
+        </div>
+        
+        <div class="terminal-body">
+            <div class="output" id="output">
+                <div class="system-info">
+                    <pre>
+ █████╗ ██████╗ ███████╗██╗     
+██╔══██╗██╔══██╗██╔════╝██║     
+███████║██████╔╝█████╗  ██║     
+██╔══██║██╔══██╗██╔══╝  ██║     
+██║  ██║██████╔╝███████╗███████╗
+╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝
+                    </pre>
+                    <div class="welcome-text">
+                        <p>Connected to The localmesh...</p>
+                        <p>Type your message and press Enter to chat with figure01.</p>
+                        <p>Commands: /clear (reset conversation), Ctrl+L (clear display only)</p>
+                        <p>Shortcuts: Ctrl+End (scroll to bottom), Page Up/Down (scroll)</p>
+                        <p>Your conversation history persists between sessions until you use /clear</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="scroll-indicator" id="scrollIndicator">↓ New messages below ↓</div>
+            
+            <div class="input-line">
+                <span class="prompt">abel@localmesh:~$ </span>
+                <input type="text" id="input" autocomplete="off" spellcheck="false" autofocus>
+                <span class="cursor">_</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

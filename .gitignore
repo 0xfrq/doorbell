@@ -1,0 +1,8 @@
+.DS_Store
+node_modules
+.env
+
+# Conversation history (contains user data)
+conversation_history.json
+
+temp

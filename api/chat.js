@@ -12,7 +12,6 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  // Set headers for Server-Sent Events
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -22,19 +21,12 @@ module.exports = async function handler(req, res) {
   });
 
   try {
-    // Send user message event
     res.write(`data: ${JSON.stringify({ type: 'userMessage', message })}\n\n`);
-
-    // Send typing indicator
     res.write(`data: ${JSON.stringify({ type: 'typing' })}\n\n`);
-
-    // Process with Gemini AI
     await geminiChat(message, (chunk) => {
-      // Stream response chunks to client
       res.write(`data: ${JSON.stringify({ type: 'aiResponse', chunk })}\n\n`);
     }, resetHistory);
 
-    // Signal end of response
     res.write(`data: ${JSON.stringify({ type: 'responseComplete' })}\n\n`);
     res.end();
 

@@ -136,10 +136,9 @@ function handleSSEMessage(data) {
             
             if (!currentAiMessage) {
                 currentAiMessage = addAiMessage();
-                currentAiMessage.textContent = 'abel> '; // Start with prompt
+                currentAiMessage.textContent = ' '; 
             }
             
-            // Simply append the character
             currentAiMessage.textContent += data.chunk;
             scrollToBottom();
             break;

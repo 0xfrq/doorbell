@@ -145,10 +145,10 @@ async function main(prompt, onData, resetHistory = false) {
       const model = genAI.getGenerativeModel({ 
         model: "gemini-2.5-flash",
         generationConfig: {
-          temperature: 1,
+          temperature: 2,
           topP: 0.95,
-          topK: 60,
-          maxOutputTokens: 1024,
+          topK: 80,
+          maxOutputTokens: 3096,
         }
       });
 
@@ -165,11 +165,8 @@ async function main(prompt, onData, resetHistory = false) {
           if (joshpanmode) {
             chunkContent = chunkContent.toLowerCase();
           }
-          for (let i = 0; i < chunkContent.length; i++) {
-            onData(chunkContent[i]);
-            await new Promise(resolve => setTimeout(resolve, 15));
-          }
-          responseBuffer += chunkContent;
+          onData(chunkContent);
+          responseBuffer += chunkContent; 
         }
       }
 

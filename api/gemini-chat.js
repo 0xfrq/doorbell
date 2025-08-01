@@ -143,12 +143,12 @@ async function main(prompt, onData, resetHistory = false) {
   return new Promise(async (resolve, reject) => {
     try {
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash-lite",
+        model: "gemini-2.5-flash",
         generationConfig: {
-          temperature: 0.79,
+          temperature: 1,
           topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 512,
+          topK: 60,
+          maxOutputTokens: 1024,
         }
       });
 

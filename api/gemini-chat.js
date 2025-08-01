@@ -165,8 +165,10 @@ async function main(prompt, onData, resetHistory = false) {
           if (joshpanmode) {
             chunkContent = chunkContent.toLowerCase();
           }
-          onData(chunkContent);
-          responseBuffer += chunkContent; 
+          for (let i = 0; i < chunkContent.length; i++) {
+            onData(chunkContent[i]);
+          }
+          responseBuffer += chunkContent;
         }
       }
 

@@ -167,6 +167,7 @@ async function main(prompt, onData, resetHistory = false) {
           }
           for (let i = 0; i < chunkContent.length; i++) {
             onData(chunkContent[i]);
+            await new Promise(resolve => setTimeout(resolve, 15));
           }
           responseBuffer += chunkContent;
         }

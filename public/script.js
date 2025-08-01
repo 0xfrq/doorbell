@@ -1,5 +1,3 @@
-const socket = io();
-
 const output = document.getElementById('output');
 const input = document.getElementById('input');
 const cursor = document.querySelector('.cursor');
@@ -69,7 +67,100 @@ function sendMessage(message, resetHistory = false) {
     isTyping = true;
     cursor.style.display = 'none';
     
-    socket.emit('message', { message, resetHistory });
+    // Send message via fetch with SSE
+    fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message, resetHistory })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        function readStream() {
+            return reader.read().then(({ done, value }) => {
+                if (done) {
+                    return;
+                }
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                
+                lines.forEach(line => {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            handleSSEMessage(data);
+                        } catch (e) {
+                            // Ignore malformed JSON
+                        }
+                    }
+                });
+                
+                return readStream();
+            });
+        }
+        
+        return readStream();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        hideTyping();
+        addMessage('Error processing your message', 'error');
+        currentAiMessage = null;
+        isTyping = false;
+        cursor.style.display = 'inline';
+        input.focus();
+    });
+}
+
+function handleSSEMessage(data) {
+    switch (data.type) {
+        case 'userMessage':
+            addMessage(data.message, 'user-message');
+            break;
+            
+        case 'typing':
+            showTyping();
+            smoothScrollToBottom();
+            break;
+            
+        case 'aiResponse':
+            hideTyping();
+            
+            if (!currentAiMessage) {
+                currentAiMessage = addAiMessage();
+                currentAiMessage.textContent = 'abel> '; // Start with prompt
+            }
+            
+            // Simply append the character
+            currentAiMessage.textContent += data.chunk;
+            scrollToBottom();
+            break;
+            
+        case 'responseComplete':
+            currentAiMessage = null;
+            isTyping = false;
+            cursor.style.display = 'inline';
+            input.focus();
+            smoothScrollToBottom();
+            break;
+            
+        case 'error':
+            hideTyping();
+            addMessage(data.message, 'error');
+            currentAiMessage = null;
+            isTyping = false;
+            cursor.style.display = 'inline';
+            input.focus();
+            break;
+    }
 }
 
 function clearOutput() {
@@ -155,51 +246,6 @@ function hideTyping() {
         typingDiv.remove();
     }
 }
-
-socket.on('userMessage', (data) => {
-    addMessage(data.message, 'user-message');
-    showTyping();
-    smoothScrollToBottom();
-});
-
-socket.on('aiResponse', (data) => {
-    hideTyping();
-    
-    if (!currentAiMessage) {
-        currentAiMessage = addAiMessage();
-    }
-    
-    const currentText = currentAiMessage.textContent.replace(/^abel> /, '');
-    currentAiMessage.textContent = currentText + data.chunk;
-    
-    scrollToBottom();
-});
-
-socket.on('responseComplete', () => {
-    currentAiMessage = null;
-    isTyping = false;
-    cursor.style.display = 'inline';
-    input.focus();
-    smoothScrollToBottom();
-});
-
-socket.on('error', (data) => {
-    hideTyping();
-    addMessage(data.message, 'error');
-    currentAiMessage = null;
-    isTyping = false;
-    cursor.style.display = 'inline';
-    input.focus();
-});
-
-socket.on('connect', () => {
-    console.log('Connected to server');
-});
-
-socket.on('disconnect', () => {
-    console.log('Disconnected from server');
-    addMessage('Connection lost. Please refresh the page.', 'error');
-});
 
 document.addEventListener('contextmenu', (e) => {
     e.preventDefault();

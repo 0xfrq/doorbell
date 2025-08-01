@@ -1,16 +1,11 @@
-const express = require('express');
 const path = require('path');
-const geminiChat = require('./api/gemini-chat');
+const geminiChat = require(path.join(process.cwd(), 'api', 'gemini-chat'));
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+module.exports = async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-// Middleware
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// API route for chat
-app.post('/api/chat', async (req, res) => {
   const { message, resetHistory = false } = req.body;
 
   if (!message) {
@@ -48,18 +43,4 @@ app.post('/api/chat', async (req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'error', message: 'Error processing your message' })}\n\n`);
     res.end();
   }
-});
-
-// Serve the main page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// For local development
-if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`[Server] web chat running on http://localhost:${PORT}`);
-    });
-}
-
-module.exports = app;
+};

@@ -182,6 +182,7 @@ async function geminiChat(prompt, onData, resetHistory = false) {
             if (joshpanmode) {
               chunkContent = chunkContent.toLowerCase();
             }
+            chunkContent = chunkContent.replace(/\*\*\([^)]*\)\*\*/g, '');
             onData(chunkContent);
             responseBuffer += chunkContent; 
           }

@@ -2,7 +2,6 @@
 node_modules
 .env
 
-# Conversation history (contains user data)
 conversation_history.json
-
+VERCEL_CHECKLIST.md
 temp

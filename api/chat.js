@@ -2,7 +2,30 @@ const fs = require('fs');
 const path = require('path');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const API_KEYS = [
+  process.env.GEMINI_API_KEY,
+  process.env.GEMINI_API_KEY2,
+  process.env.GEMINI_API_KEY3
+].filter(key => key); 
+
+let currentKeyIndex = 0;
+let genAI = new GoogleGenerativeAI(API_KEYS[currentKeyIndex]);
+
+function switchToNextApiKey() {
+  currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+  genAI = new GoogleGenerativeAI(API_KEYS[currentKeyIndex]);
+  console.log(`[API] Switched to API key ${currentKeyIndex + 1}`);
+  return currentKeyIndex;
+}
+
+function isQuotaError(error) {
+  return error.message && (
+    error.message.includes('429') ||
+    error.message.includes('Too Many Requests') ||
+    error.message.includes('quota') ||
+    error.message.includes('Quota')
+  );
+}
 
 const joshpanmode = false;
 const stopcharacter = "";
@@ -112,50 +135,65 @@ async function geminiChat(prompt, onData, resetHistory = false) {
   }
 
   let responseBuffer = ""; 
+  let maxRetries = API_KEYS.length;
+  let retryCount = 0;
 
   return new Promise(async (resolve, reject) => {
-    try {
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash",
-        generationConfig: {
-          temperature: 2,
-          topP: 0.95,
-          topK: 80,
-          maxOutputTokens: 3096,
-        }
-      });
-
-      const chat = model.startChat({
-        history: messageHistory.slice(0, -1), 
-      });
-
-      const result = await chat.sendMessageStream(prompt);
-
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        if (chunkText) {
-          let chunkContent = chunkText;
-          if (joshpanmode) {
-            chunkContent = chunkContent.toLowerCase();
+    async function attemptRequest() {
+      try {
+        const model = genAI.getGenerativeModel({ 
+          model: "gemini-2.0-flash-lite",
+          generationConfig: {
+            temperature: 2,
+            topP: 0.95,
+            topK: 80,
+            maxOutputTokens: 3096,
           }
-          onData(chunkContent);
-          responseBuffer += chunkContent; 
+        });
+
+        const chat = model.startChat({
+          history: messageHistory.slice(0, -1), 
+        });
+
+        const result = await chat.sendMessageStream(prompt);
+
+        for await (const chunk of result.stream) {
+          const chunkText = chunk.text();
+          if (chunkText) {
+            let chunkContent = chunkText;
+            if (joshpanmode) {
+              chunkContent = chunkContent.toLowerCase();
+            }
+            onData(chunkContent);
+            responseBuffer += chunkContent; 
+          }
+        }
+
+        onData(" " + stopcharacter);
+
+        messageHistory.push({
+          role: "model",
+          parts: [{ text: responseBuffer }]
+        });
+
+        resolve();
+
+      } catch (error) {
+        console.error(`[API] Error with API key ${currentKeyIndex + 1}:`, error.message);
+        
+        if (isQuotaError(error) && retryCount < maxRetries - 1) {
+          retryCount++;
+          switchToNextApiKey();
+          console.log(`[API] Retrying with next API key (attempt ${retryCount + 1}/${maxRetries})`);
+          await attemptRequest();
+        } else {
+          console.error("Gemini stream error:", error);
+          reject(error);
         }
       }
-
-      onData(" " + stopcharacter);
-
-      messageHistory.push({
-        role: "model",
-        parts: [{ text: responseBuffer }]
-      });
-
-      resolve();
-
-    } catch (error) {
-      console.error("Gemini stream error:", error);
-      reject(error);
     }
+
+    await attemptRequest();
   });
 }
 

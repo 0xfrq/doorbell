@@ -8,13 +8,28 @@ const API_KEYS = [
   process.env.GEMINI_API_KEY3
 ].filter(key => key); 
 
+const MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite", 
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite"
+];
+
 let currentKeyIndex = 0;
+let currentModelIndex = 0;
 let genAI = new GoogleGenerativeAI(API_KEYS[currentKeyIndex]);
+
+function switchToNextModel() {
+  currentModelIndex = (currentModelIndex + 1) % MODELS.length;
+  console.log(`[API] Switched to model: ${MODELS[currentModelIndex]}`);
+  return currentModelIndex;
+}
 
 function switchToNextApiKey() {
   currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+  currentModelIndex = 0; 
   genAI = new GoogleGenerativeAI(API_KEYS[currentKeyIndex]);
-  console.log(`[API] Switched to API key ${currentKeyIndex + 1}`);
+  console.log(`[API] Switched to API key ${currentKeyIndex + 1}, reset to model: ${MODELS[currentModelIndex]}`);
   return currentKeyIndex;
 }
 
@@ -135,14 +150,17 @@ async function geminiChat(prompt, onData, resetHistory = false) {
   }
 
   let responseBuffer = ""; 
-  let maxRetries = API_KEYS.length;
+  let maxRetries = API_KEYS.length * MODELS.length; 
   let retryCount = 0;
 
   return new Promise(async (resolve, reject) => {
     async function attemptRequest() {
       try {
+        const currentModel = MODELS[currentModelIndex];
+        console.log(`[API] Trying model: ${currentModel} with API key ${currentKeyIndex + 1}`);
+        
         const model = genAI.getGenerativeModel({ 
-          model: "gemini-2.0-flash-lite",
+          model: currentModel,
           generationConfig: {
             temperature: 2,
             topP: 0.95,
@@ -179,12 +197,19 @@ async function geminiChat(prompt, onData, resetHistory = false) {
         resolve();
 
       } catch (error) {
-        console.error(`[API] Error with API key ${currentKeyIndex + 1}:`, error.message);
+        console.error(`[API] Error with model ${MODELS[currentModelIndex]} and API key ${currentKeyIndex + 1}:`, error.message);
         
         if (isQuotaError(error) && retryCount < maxRetries - 1) {
           retryCount++;
-          switchToNextApiKey();
-          console.log(`[API] Retrying with next API key (attempt ${retryCount + 1}/${maxRetries})`);
+          
+          if (currentModelIndex < MODELS.length - 1) {
+            switchToNextModel();
+            console.log(`[API] Trying next model (attempt ${retryCount + 1}/${maxRetries})`);
+          } else {
+            switchToNextApiKey();
+            console.log(`[API] All models failed, switching API key (attempt ${retryCount + 1}/${maxRetries})`);
+          }
+          
           await attemptRequest();
         } else {
           console.error("Gemini stream error:", error);

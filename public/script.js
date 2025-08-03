@@ -67,7 +67,6 @@ function sendMessage(message, resetHistory = false) {
     isTyping = true;
     cursor.style.display = 'none';
     
-    // Send message via fetch with SSE
     fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -98,7 +97,6 @@ function sendMessage(message, resetHistory = false) {
                             const data = JSON.parse(line.slice(6));
                             handleSSEMessage(data);
                         } catch (e) {
-                            // Ignore malformed JSON
                         }
                     }
                 });

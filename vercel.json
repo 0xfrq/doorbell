@@ -1,13 +1,8 @@
 {
-  "functions": {
-    "api/index.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "routes": [
     {
       "src": "/api/chat",
-      "dest": "/api/index.js"
+      "dest": "/api/chat.js"
     },
     {
       "src": "/(.*)",

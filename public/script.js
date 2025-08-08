@@ -58,6 +58,15 @@ function handleCommand(message) {
         return;
     }
     
+    if (message.startsWith('/search ')) {
+        if (message.trim() === '/search') {
+            addMessage('Usage: /search your search query here', 'error');
+            return;
+        }
+        sendMessage(message);
+        return;
+    }
+    
     sendMessage(message);
 }
 
@@ -175,7 +184,8 @@ function clearOutput() {
                     </pre>
                     <div class="welcome-text">
                         <p>Type your message and press Enter to chat with abel.</p>
-                        <p>Commands: /clear (reset conversation), Ctrl+L (clear display only)</p>
+                        <p>Commands: /clear (reset conversation), /search (web search)</p>
+                        <p>Shortcuts: Ctrl+L (clear display only)</p>
                         <p>Shortcuts: Ctrl+End (scroll to bottom), Page Up/Down (scroll)</p>
                         <p>Your conversation history persists between sessions until you use /clear</p>
                     </div>        </div>

@@ -132,9 +132,20 @@ async function main(prompt, onData, resetHistory = false) {
     resetMessageHistory();
   }
 
+  // Check if this is a search command
+  const isSearchCommand = prompt.trim().startsWith('/search ');
+  let searchQuery = '';
+  let actualPrompt = prompt;
+  
+  if (isSearchCommand) {
+    searchQuery = prompt.trim().substring(8); // Remove '/search ' prefix
+    actualPrompt = searchQuery;
+    onData(`🔍 Searching for: "${searchQuery}"\n\n`);
+  }
+
   messageHistory.push({
     role: "user",
-    parts: [{ text: prompt }]
+    parts: [{ text: actualPrompt }]
   });
   checkMessageHistory();
 
@@ -142,6 +153,14 @@ async function main(prompt, onData, resetHistory = false) {
 
   return new Promise(async (resolve, reject) => {
     try {
+      // Configure tools based on whether this is a search command
+      let tools = [];
+      if (isSearchCommand) {
+        tools.push({
+          google_search: {}
+        });
+      }
+
       const model = genAI.getGenerativeModel({ 
         model: "gemini-2.0-flash",
         generationConfig: {
@@ -149,14 +168,15 @@ async function main(prompt, onData, resetHistory = false) {
           topP: 0.95,
           topK: 80,
           maxOutputTokens: 3096,
-        }
+        },
+        tools: tools.length > 0 ? tools : undefined
       });
 
       const chat = model.startChat({
         history: messageHistory.slice(0, -1), 
       });
 
-      const result = await chat.sendMessageStream(prompt);
+      const result = await chat.sendMessageStream(actualPrompt);
 
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
@@ -165,6 +185,8 @@ async function main(prompt, onData, resetHistory = false) {
           if (joshpanmode) {
             chunkContent = chunkContent.toLowerCase();
           }
+          // Filter out **(xxx)** patterns
+          chunkContent = chunkContent.replace(/\*\*\([^)]*\)\*\*/g, '');
           onData(chunkContent);
           responseBuffer += chunkContent; 
         }
@@ -172,6 +194,31 @@ async function main(prompt, onData, resetHistory = false) {
 
       console.log("[gemini-chat.js] Stream completed.");
       onData(" " + stopcharacter);
+
+      // If this was a search command, try to show grounding information
+      if (isSearchCommand && result.response) {
+        try {
+          const response = await result.response;
+          if (response.candidates && response.candidates[0] && response.candidates[0].groundingMetadata) {
+            const groundingMetadata = response.candidates[0].groundingMetadata;
+            
+            if (groundingMetadata.webSearchQueries) {
+              onData(`\n\n🔍 **Search queries used:** ${groundingMetadata.webSearchQueries.join(', ')}`);
+            }
+            
+            if (groundingMetadata.groundingChunks && groundingMetadata.groundingChunks.length > 0) {
+              onData(`\n\n📚 **Sources:**`);
+              groundingMetadata.groundingChunks.forEach((chunk, index) => {
+                if (chunk.web) {
+                  onData(`\n${index + 1}. ${chunk.web.title} - ${chunk.web.uri}`);
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.log("[gemini-chat.js] Could not extract grounding metadata:", error.message);
+        }
+      }
 
       messageHistory.push({
         role: "model",
